@@ -22,13 +22,4 @@ if (yearSpan) {
   yearSpan.textContent = new Date().getFullYear();
 }
 
-// Added by ChatGPT enhancement
-document.addEventListener("DOMContentLoaded", function(){
-  const nav = document.querySelector("nav");
-  if(!nav) return;
-  let toggle = document.createElement("div");
-  toggle.className = "menu-toggle";
-  toggle.innerHTML = "☰";
-  nav.insertBefore(toggle, nav.firstChild);
-  toggle.addEventListener("click", ()=> nav.classList.toggle("active"));
-});
+// Removed legacy menu creation to prevent duplicate mobile toggles

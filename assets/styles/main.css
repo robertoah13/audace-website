@@ -322,7 +322,3 @@ a {
 body { font-family: "Inter", sans-serif; color: var(--text-color); }
 .hero { width:100%; overflow:hidden; }
 .hero img { width:100%; height:auto; display:block; }
-nav .menu-toggle { display:none; cursor:pointer; }
-@media (max-width:768px){ nav ul { display:none; }
- nav.active ul{display:block;}
- nav .menu-toggle{display:block;} }
