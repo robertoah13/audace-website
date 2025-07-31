@@ -37,6 +37,16 @@ python3 -m http.server --directory .
 
 e acesse `http://localhost:8000`.
 
+## Comandos úteis
+
+Para compilar o arquivo SCSS manualmente, utilize o [Dart Sass](https://sass-lang.com/install):
+
+```bash
+sass assets/styles/main.scss assets/styles/main.css --watch
+```
+
+Assim as alterações em `main.scss` serão refletidas automaticamente em `main.css`.
+
 ## Personalização
 
 - **Cores e tipografia:** edite as variáveis em `assets/styles/main.css` (ou o SCSS equivalente) para alterar a paleta de cores ou fontes.
