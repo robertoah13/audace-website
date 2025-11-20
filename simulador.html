@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simulador Sicário</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+          },
+        },
+      };
+    </script>
+    <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+    />
+    <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  </head>
+  <body class="bg-[#0f172a]">
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const createIcon = symbol => props => (
+        <span {...props} role="img" aria-hidden className={props?.className}>
+          {symbol}
+        </span>
+      );
+
+      const Sword = createIcon('🗡️');
+      const Shield = createIcon('🛡️');
+      const Zap = createIcon('⚡');
+      const Skull = createIcon('💀');
+      const Target = createIcon('🎯');
+      const Activity = createIcon('📈');
+      const BarChart3 = createIcon('📊');
+      const Layers = createIcon('🗂️');
+      const Info = createIcon('ℹ️');
+      const ChevronRight = createIcon('›');
+      const Settings = createIcon('⚙️');
+
+      const JOB_BONUS = { str: 29, agi: 25, vit: 22, int: 29, dex: 23, luk: 18 };
+
+      const DB = {
+        head_top: {
+          name: 'Memorável Vingança dos Mortos [1]',
+          baseStats: { all_stats: 1 },
+          process: refine => ({
+            crit_dmg: refine * 1,
+            aspd_pct: refine * 1,
+            hp_pct: Math.floor(refine / 2) * 1,
+            sp_pct: Math.floor(refine / 2) * 1,
+            skill_loki: Math.floor(refine / 2) * 20,
+            skill_cross: Math.floor(refine / 2) * 15,
+          }),
+          card: { name: 'Louva-a-deus Angra', stats: { crit_dmg: 2 }, process: r => ({ crit_dmg: Math.floor(r / 2) }) },
+          enchant: { name: 'Insígnia do Talento 5', stats: { crit: 15, crit_dmg: 80 } },
+        },
+        head_mid: {
+          name: 'Asas Vitoriosas [1]',
+          baseStats: { atk: 5, matk: 5, delay: 4 },
+          card: { name: 'Engkanto', stats: { race_poison: 30, ignore_plant: 30 } },
+          enchant: { name: 'CRIT +3', stats: { crit: 3 } },
+        },
+        head_low: {
+          name: 'Broto Temporal SOR',
+          baseStats: {},
+        },
+        armor: {
+          name: 'Armadura Temporal SOR [1]',
+          baseStats: { def: 120, atk: 50 },
+          process: refine => {
+            const s = { crit_dmg: Math.floor(refine / 3) * 2 };
+            if (refine >= 7) {
+              s.ignore_brute = 30;
+              s.ignore_demon = 30;
+            }
+            if (refine >= 9) {
+              s.race_brute = 10;
+              s.race_demon = 10;
+            }
+            return s;
+          },
+          card: { name: 'Raposa Raivosa', stats: { crit: 5, crit_dmg: 10 }, process: r => (r >= 10 ? { crit: 10 } : {}) },
+          enchant: { name: 'CRIT+5 / Delay -4%', stats: { crit: 5, delay: 4 } },
+        },
+        weapon: {
+          name: 'Infiltrador Ilusional [2]',
+          atk: 200,
+          type: 'katar',
+          baseStats: { def: 3, race_human: 60, flee: 5, pdodge: 2, double_crit: true },
+          process: refine => {
+            const s = {};
+            if (refine >= 9) {
+              s.flee = 5;
+              s.pdodge = 2;
+            }
+            if (refine >= 10) {
+              s.weapon_atk_pct = 5;
+            }
+            return s;
+          },
+          card: { name: '2x Alma de Eremes', stats: { skill_rolling: 20, crit: 20, crit_dmg: 20 } },
+          enchant: { name: 'Módulos Ilusionais', stats: { damage_earth: 2, delay: 6, ignore_human: 15 } },
+        },
+        garment: {
+          name: '+10 Manto Temporal SOR [1]',
+          baseStats: { def: 38 },
+          process: refine => {
+            const s = {
+              crit: Math.floor(refine / 2) * 3,
+              crit_dmg: Math.floor(refine / 2) * 3,
+              aspd_pct: Math.floor(refine / 4) * 5,
+            };
+            if (refine >= 7) s.weapon_atk_pct = 7;
+            if (refine >= 9) {
+              s.ignore_brute = 20;
+              s.ignore_demon = 20;
+            }
+            if (refine >= 11) {
+              s.ignore_brute = (s.ignore_brute || 0) + 10;
+              s.ignore_demon = (s.ignore_demon || 0) + 10;
+            }
+            return s;
+          },
+          card: { name: 'Wakwak', stats: {}, processGlobal: stats => ({ atk_flat: Math.floor(stats.base_str / 10) * 5 }) },
+          enchant: { name: 'Delay -15%', stats: { delay: 15 } },
+        },
+        shoes: {
+          name: '+10 Bota Temporal SOR [1]',
+          baseStats: { hp_flat: 300, sp_flat: 30 },
+          process: (refine, globalStats) => {
+            const s = { hp_flat: Math.floor(refine / 3) * 100, sp_flat: Math.floor(refine / 3) * 10, crit_dmg: Math.floor(refine / 3) * 2 };
+            if (globalStats.base_luk >= 120) s.crit_dmg += 30;
+            return s;
+          },
+          card: { name: 'Zumbi Atirador', stats: { str: 2 }, process: r => (r >= 9 ? { hp_pct: 10, sp_pct: 10 } : {}) },
+          enchant: { name: 'Instinto / AA4', stats: { aspd_pct: 10 } },
+        },
+        acc1: {
+          name: 'Anel de Reforço Físico [1]',
+          baseStats: { phys_dmg: 5 },
+          card: { name: 'Aquecedor Ominoso', stats: { crit: 3, crit_dmg: 5 } },
+          enchant: { name: 'Crit Dmg +13%', stats: { crit_dmg: 13 } },
+        },
+        acc2: {
+          name: 'Anel Ilusional [1]',
+          baseStats: { str: 3 },
+          processGlobal: stats => (stats.base_str >= 100 ? { atk_flat: 30 } : {}),
+          card: { name: 'Aquecedor Ominoso', stats: { crit: 3, crit_dmg: 5 } },
+        },
+        shadow: {
+          name: 'Set Sombrio Full (Mortal + Penetração)',
+          process: refines => {
+            const s = {
+              atk_flat: 25,
+              crit: 14,
+              crit_dmg: 6,
+              ignore_normal: 5 + Math.floor(refines.shoes / 2),
+              set_bonus_mortal: 0,
+            };
+
+            const somaMortal = refines.weapon + refines.earring + refines.pendant;
+            if (somaMortal >= 25) s.crit_dmg += 10;
+            if (somaMortal >= 30) s.aspd_flat = 3;
+
+            s.crit_dmg += Math.floor(refines.weapon / 2) + Math.floor(refines.earring / 2) + Math.floor(refines.pendant / 2);
+
+            return s;
+          },
+        },
+        visuals: {
+          name: 'Set Visual (Encantado)',
+          stats: { crit_dmg: 3, aspd_fixed: 1, delay: 1 },
+        },
+      };
+
+      const StatInput = ({ label, value, onChange, bonus }) => (
+        <div className="flex items-center justify-between bg-slate-900 p-2 rounded border border-slate-800">
+          <span className="text-xs font-bold text-slate-400 w-8">{label}</span>
+          <input
+            type="number"
+            value={value}
+            onChange={e => onChange(Number(e.target.value))}
+            className="w-12 bg-transparent text-right font-mono text-white outline-none border-b border-slate-700 focus:border-purple-500"
+          />
+          <span className="text-[10px] text-green-500 w-6 text-right">+{bonus}</span>
+        </div>
+      );
+
+      const RefineSelector = ({ value, onChange }) => (
+        <div className="flex items-center bg-black/40 rounded px-2 py-1 border border-slate-700">
+          <span className="text-[9px] text-slate-500 mr-2">REF</span>
+          <button onClick={() => onChange(Math.max(0, value - 1))} className="text-slate-400 hover:text-white">
+            -
+          </button>
+          <span className="mx-2 text-xs font-bold text-yellow-400">+{value}</span>
+          <button onClick={() => onChange(Math.min(20, value + 1))} className="text-slate-400 hover:text-white">
+            +
+          </button>
+        </div>
+      );
+
+      const ItemCard = ({ slot, itemData, refine, setRefine, extraInfo }) => (
+        <div className="bg-slate-800/50 border border-slate-700 p-3 rounded flex flex-col gap-2 relative group hover:border-purple-500/50 transition">
+          <div className="flex justify-between items-start">
+            <div>
+              <span className="text-[9px] uppercase text-slate-500 font-bold">{slot}</span>
+              <div className="text-xs font-bold text-purple-200 truncate w-48">{itemData.name}</div>
+            </div>
+            {refine !== undefined && <RefineSelector value={refine} onChange={setRefine} />}
+          </div>
+
+          <div className="text-[10px] text-slate-400 space-y-0.5">
+            {itemData.card && (
+              <div className="flex gap-1 items-center">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div> {itemData.card.name}
+              </div>
+            )}
+            {itemData.enchant && (
+              <div className="flex gap-1 items-center">
+                <div className="w-1.5 h-1.5 rounded-full bg-yellow-500"></div> {itemData.enchant.name}
+              </div>
+            )}
+          </div>
+
+          {extraInfo && (
+            <div className="absolute top-full left-0 z-10 hidden group-hover:block w-full bg-black/90 p-2 text-[10px] text-slate-300 rounded border border-slate-600 mt-1 shadow-xl">
+              {extraInfo}
+            </div>
+          )}
+        </div>
+      );
+
+      function SicarioSimulatorFinal() {
+        const [attributes, setAttributes] = React.useState({ str: 120, agi: 90, vit: 90, int: 20, dex: 20, luk: 120 });
+
+        const [refines, setRefines] = React.useState({
+          head_top: 12,
+          armor: 11,
+          weapon: 11,
+          garment: 10,
+          shoes: 10,
+          shadow_armor: 4,
+          shadow_weapon: 10,
+          shadow_shield: 2,
+          shadow_shoes: 4,
+          shadow_earring: 10,
+          shadow_pendant: 10,
+        });
+
+        const [config, setConfig] = React.useState({ edp: true, target_race: 'brute', target_def: 100 });
+
+        const stats = React.useMemo(() => {
+          const totalStats = {
+            str: attributes.str + JOB_BONUS.str,
+            agi: attributes.agi + JOB_BONUS.agi,
+            vit: attributes.vit + JOB_BONUS.vit,
+            int: attributes.int + JOB_BONUS.int,
+            dex: attributes.dex + JOB_BONUS.dex,
+            luk: attributes.luk + JOB_BONUS.luk,
+          };
+
+          const mods = {
+            atk_flat: 0,
+            atk_pct: 0,
+            weapon_atk_pct: 0,
+            crit: 0,
+            crit_dmg: 0,
+            aspd_pct: 0,
+            aspd_fixed: 0,
+            delay: 0,
+            ignore_def: 0,
+            hp_flat: 0,
+            hp_pct: 0,
+            sp_flat: 0,
+            sp_pct: 0,
+            race_mod: 0,
+            size_mod: 0,
+            skill_ci_mod: 0,
+          };
+
+          const add = source => {
+            if (!source) return;
+            Object.keys(source).forEach(key => {
+              if (mods[key] !== undefined) mods[key] += source[key];
+              else mods[key] = source[key];
+            });
+          };
+
+          add(DB.head_top.baseStats);
+          add(DB.head_top.process(refines.head_top));
+          add(DB.head_top.card?.stats);
+          add(DB.head_top.card?.process?.(refines.head_top));
+          add(DB.head_top.enchant?.stats);
+
+          add(DB.head_mid.baseStats);
+          add(DB.head_mid.card?.stats);
+          add(DB.head_mid.enchant?.stats);
+
+          add(DB.armor.baseStats);
+          add(DB.armor.process(refines.armor));
+          add(DB.armor.card?.stats);
+          add(DB.armor.card?.process?.(refines.armor));
+          add(DB.armor.enchant?.stats);
+          if (refines.armor + refines.shoes >= 21) {
+            mods.ignore_brute = (mods.ignore_brute || 0) + 20;
+            mods.ignore_demon = (mods.ignore_demon || 0) + 20;
+          }
+
+          add(DB.weapon.process(refines.weapon));
+          add(DB.weapon.baseStats);
+          add(DB.weapon.card?.stats);
+          add(DB.weapon.enchant?.stats);
+
+          add(DB.garment.baseStats);
+          add(DB.garment.process(refines.garment));
+          add(DB.garment.card?.processGlobal?.({ base_str: attributes.str }));
+          add(DB.garment.enchant?.stats);
+
+          add(DB.shoes.baseStats);
+          add(DB.shoes.process(refines.shoes, { base_luk: attributes.luk }));
+          add(DB.shoes.card?.stats);
+          add(DB.shoes.card?.process?.(refines.shoes));
+          add(DB.shoes.enchant?.stats);
+
+          add(DB.acc1.baseStats);
+          add(DB.acc1.card?.stats);
+          add(DB.acc1.enchant?.stats);
+          add(DB.acc2.baseStats);
+          add(DB.acc2.card?.stats);
+          add(DB.acc2.processGlobal?.({ base_str: attributes.str }));
+
+          add(DB.shadow.process({
+            weapon: refines.shadow_weapon,
+            earring: refines.shadow_earring,
+            pendant: refines.shadow_pendant,
+            shoes: refines.shadow_shoes,
+          }));
+
+          add(DB.visuals.stats);
+
+          const aspdBase = 188;
+          const agiDexFactor = Math.sqrt(totalStats.agi * 10.2 + totalStats.dex * 0.19);
+          let finalAspd = 188 + agiDexFactor * 0.04;
+          finalAspd = finalAspd + (mods.aspd_fixed || 0);
+          if (mods.aspd_pct > 50 || finalAspd > 191) finalAspd = 193;
+          else finalAspd = Math.min(193, finalAspd * (1 + mods.aspd_pct / 100));
+
+          const statusAtk = Math.floor((175 / 4 + totalStats.str + totalStats.dex / 5 + totalStats.luk / 3) * 2);
+
+          const refineBonus = refines.weapon * 7;
+          const wAtkBase = DB.weapon.atk + refineBonus + (mods.atk_flat || 0);
+          const wAtkTotal = wAtkBase * (1 + totalStats.str / 200) * (1 + (mods.weapon_atk_pct || 0) / 100);
+
+          const edpMod = config.edp ? 4.0 : 1.0;
+
+          let raceMultiplier = 1.0;
+          if (config.target_race === 'human') raceMultiplier += ((mods.race_human || 0) + (mods.race_humanoid || 0)) / 100;
+          if (config.target_race === 'brute') raceMultiplier += (mods.race_brute || 0) / 100;
+          if (config.target_race === 'demon') raceMultiplier += (mods.race_demon || 0) / 100;
+
+          const finalAtk = statusAtk * 2 + wAtkTotal * raceMultiplier * edpMod * (1 + (mods.atk_pct || 0) / 100);
+
+          let ignoreVal = 0;
+          if (config.target_race === 'brute') ignoreVal = mods.ignore_brute || 0;
+          if (config.target_race === 'demon') ignoreVal = mods.ignore_demon || 0;
+          if (config.target_race === 'human') ignoreVal = mods.ignore_human || 0;
+
+          ignoreVal += mods.ignore_normal || 0;
+
+          const targetDef = config.target_def * (1 - Math.min(1, ignoreVal / 100));
+          const defReduc = (4000 + targetDef) / (4000 + targetDef * 10);
+
+          const baseDmg = finalAtk * defReduc;
+
+          const critRate = 1 + totalStats.luk * 0.3 + (mods.crit || 0);
+          const critDmgMult = 1.4 + ((mods.crit_dmg || 0) / 100);
+          const critHit = baseDmg * critDmgMult;
+
+          const skillMod = (1400 + (mods.skill_cross || 0)) / 100;
+          const ciDmg = baseDmg * skillMod * 7;
+
+          return {
+            totalStats,
+            mods,
+            finalAtk: Math.floor(finalAtk),
+            critHit: Math.floor(critHit),
+            ciDmg: Math.floor(ciDmg),
+            critRate: Math.floor(critRate),
+            aspd: Math.floor(finalAspd),
+            ignoreVal,
+            defReduc,
+          };
+        }, [attributes, refines, config]);
+
+        return (
+          <div className="min-h-screen bg-[#0f172a] text-slate-200 font-sans selection:bg-purple-500 selection:text-white pb-10">
+            <header className="bg-[#1e293b] border-b border-slate-700 p-4 sticky top-0 z-20 shadow-xl">
+              <div className="max-w-6xl mx-auto flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-lg shadow-lg shadow-purple-500/20">
+                    <Skull size={24} className="text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-bold text-white tracking-tight">
+                      Sicário <span className="text-purple-400">Simulator</span>
+                    </h1>
+                    <div className="flex items-center gap-2 text-[10px] text-slate-400 uppercase tracking-wider">
+                      <span>Renewal</span>
+                      <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
+                      <span>Bônus Validados</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-right hidden sm:block">
+                    <div className="text-2xl font-black text-purple-400">{stats.mods.crit_dmg}%</div>
+                    <div className="text-[10px] text-slate-500 uppercase">Dano Crítico Total</div>
+                  </div>
+                </div>
+              </div>
+            </header>
+
+            <main className="max-w-6xl mx-auto p-4 grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div className="lg:col-span-3 space-y-4">
+                <div className="bg-[#1e293b] p-4 rounded-xl border border-slate-700">
+                  <h3 className="text-xs font-bold text-slate-400 mb-3 uppercase flex items-center gap-2">
+                    <Activity size={14} /> Atributos Base
+                  </h3>
+                  <div className="space-y-1">
+                    {Object.keys(attributes).map(key => (
+                      <StatInput key={key} label={key.toUpperCase()} value={attributes[key]} onChange={value => setAttributes({ ...attributes, [key]: value })} bonus={JOB_BONUS[key]} />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-[#1e293b] p-4 rounded-xl border border-slate-700">
+                  <h3 className="text-xs font-bold text-red-400 mb-3 uppercase flex items-center gap-2">
+                    <Target size={14} /> Configuração Alvo
+                  </h3>
+                  <div className="space-y-3">
+                    <select
+                      value={config.target_race}
+                      onChange={event => setConfig({ ...config, target_race: event.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-xs text-white outline-none"
+                    >
+                      <option value="human">Humanoide (Player)</option>
+                      <option value="brute">Bruto (MVP Padrão)</option>
+                      <option value="demon">Demônio (MVP Padrão)</option>
+                    </select>
+                    <div>
+                      <label className="text-[10px] text-slate-500 uppercase font-bold">Hard DEF</label>
+                      <input
+                        type="number"
+                        value={config.target_def}
+                        onChange={event => setConfig({ ...config, target_def: Number(event.target.value) })}
+                        className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-xs text-white outline-none"
+                      />
+                    </div>
+                    <button
+                      onClick={() => setConfig({ ...config, edp: !config.edp })}
+                      className={`w-full py-2 rounded text-xs font-bold border transition ${config.edp ? 'bg-purple-600 border-purple-400 text-white shadow-[0_0_15px_rgba(147,51,234,0.4)]' : 'bg-slate-800 border-slate-600 text-slate-500'}`}
+                    >
+                      EDP {config.edp ? 'ATIVO' : 'OFF'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="lg:col-span-5 space-y-4">
+                <div className="bg-[#1e293b] p-4 rounded-xl border border-slate-700 h-full">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xs font-bold text-purple-300 mb-0 uppercase flex items-center gap-2">
+                      <Shield size={14} /> Equipamentos Atuais
+                    </h3>
+                    <span className="text-[10px] text-slate-500">Ajuste os refinos</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2 overflow-y-auto pr-2" style={{ maxHeight: '650px' }}>
+                    <ItemCard slot="Topo" itemData={DB.head_top} refine={refines.head_top} setRefine={value => setRefines({ ...refines, head_top: value })} extraInfo="Insignia do Talento 5 (+80% Crit Dmg)" />
+                    <ItemCard slot="Meio" itemData={DB.head_mid} />
+                    <ItemCard slot="Baixo" itemData={DB.head_low} />
+                    <div className="border-t border-slate-700 my-1"></div>
+                    <ItemCard slot="Arma" itemData={DB.weapon} refine={refines.weapon} setRefine={value => setRefines({ ...refines, weapon: value })} extraInfo="Infiltrador: 60% Race Human, Double Crit" />
+                    <ItemCard slot="Armadura" itemData={DB.armor} refine={refines.armor} setRefine={value => setRefines({ ...refines, armor: value })} />
+                    <ItemCard slot="Capa" itemData={DB.garment} refine={refines.garment} setRefine={value => setRefines({ ...refines, garment: value })} extraInfo="Wakwak: ATK por FOR pura" />
+                    <ItemCard slot="Bota" itemData={DB.shoes} refine={refines.shoes} setRefine={value => setRefines({ ...refines, shoes: value })} extraInfo="Combo SOR: +30% Crit Dmg se 120 LUK" />
+                    <div className="border-t border-slate-700 my-1"></div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <ItemCard slot="Acessório 1" itemData={DB.acc1} />
+                      <ItemCard slot="Acessório 2" itemData={DB.acc2} />
+                    </div>
+                    <div className="bg-black/20 p-2 rounded border border-slate-700/50 mt-2">
+                      <div className="text-[10px] text-slate-500 uppercase font-bold mb-2">Refinos Set Sombrio (Mortal + Penetr)</div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <RefineSelector value={refines.shadow_weapon} onChange={value => setRefines({ ...refines, shadow_weapon: value })} />
+                        <RefineSelector value={refines.shadow_earring} onChange={value => setRefines({ ...refines, shadow_earring: value })} />
+                        <RefineSelector value={refines.shadow_pendant} onChange={value => setRefines({ ...refines, shadow_pendant: value })} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="lg:col-span-4 space-y-4">
+                <div className="relative overflow-hidden bg-gradient-to-br from-[#3b0764] to-[#1e1b4b] p-6 rounded-2xl border border-purple-500/40 shadow-2xl">
+                  <div className="absolute top-0 right-0 opacity-10 p-4 pointer-events-none">
+                    <Sword size={120} />
+                  </div>
+
+                  <h2 className="text-sm font-bold text-purple-200 uppercase tracking-widest mb-6 flex items-center gap-2 z-10 relative">
+                    <BarChart3 size={16} /> Resultado DPS
+                  </h2>
+
+                  <div className="relative z-10 space-y-6">
+                    <div>
+                      <div className="flex justify-between items-end mb-1">
+                        <span className="text-xs font-bold text-yellow-200 uppercase">Retaliação (Cross Impact)</span>
+                        <span className="text-[9px] bg-yellow-500/20 text-yellow-300 px-2 py-0.5 rounded border border-yellow-500/30">Mod Skills: +{stats.mods.skill_cross || 0}%</span>
+                      </div>
+                      <div className="text-4xl font-black text-white tracking-tight drop-shadow-lg">{stats.ciDmg.toLocaleString()}</div>
+                      <div className="text-[10px] text-slate-400">Dano Total por uso (7 hits)</div>
+                    </div>
+
+                    <div className="pt-4 border-t border-white/10">
+                      <div className="flex justify-between items-end mb-1">
+                        <span className="text-xs font-bold text-slate-300 uppercase">Hit Crítico (Auto)</span>
+                        <span className="text-xs font-mono text-purple-300">{stats.mods.crit_dmg}% Crit Dmg</span>
+                      </div>
+                      <div className="text-2xl font-bold text-purple-100 opacity-90">{stats.critHit.toLocaleString()}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-[#1e293b] border border-slate-700 rounded-xl overflow-hidden">
+                  <div className="bg-slate-800 p-3 border-b border-slate-700 flex justify-between items-center">
+                    <h3 className="text-xs font-bold text-slate-300 uppercase flex items-center gap-2">
+                      <Layers size={14} /> Bônus Ativos
+                    </h3>
+                    <Info size={14} className="text-slate-500" />
+                  </div>
+                  <div className="p-4 space-y-3 font-mono text-xs">
+                    <div className="flex justify-between border-b border-slate-700/50 pb-1">
+                      <span className="text-slate-400">Ignorar Def ({config.target_race})</span>
+                      <span className={`font-bold ${stats.ignoreVal >= 100 ? 'text-green-400' : 'text-yellow-400'}`}>{stats.ignoreVal}%</span>
+                    </div>
+                    <div className="flex justify-between border-b border-slate-700/50 pb-1">
+                      <span className="text-slate-400">Pós-Conjuração (Delay)</span>
+                      <span className="font-bold text-white">-{stats.mods.delay}%</span>
+                    </div>
+                    <div className="flex justify-between border-b border-slate-700/50 pb-1">
+                      <span className="text-slate-400">ASPD (Vel. Ataque)</span>
+                      <span className="font-bold text-white">{stats.aspd}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-slate-700/50 pb-1">
+                      <span className="text-slate-400">ATQ Final (Status+Equip)</span>
+                      <span className="font-bold text-white">{stats.finalAtk}</span>
+                    </div>
+                    <div className="mt-2 p-2 bg-black/20 rounded text-[10px] text-slate-500 leading-tight">
+                      O bônus de <b>+80% Dano Crítico</b> da Insígnia foi aplicado. O <b>combo Wakwak</b> foi calculado com base na FOR total.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </main>
+          </div>
+        );
+      }
+
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<SicarioSimulatorFinal />);
+    </script>
+  </body>
+</html>
