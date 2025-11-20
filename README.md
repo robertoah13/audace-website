@@ -16,6 +16,7 @@ audace-website/
 ├── sobre.html             # Quem somos
 ├── servicos.html          # Serviços oferecidos
 ├── cases.html             # Portfólio de cases
+├── simulador.html         # Página experimental do simulador Sicário
 └── contato.html           # Página de contato
 ```
 
@@ -26,6 +27,7 @@ audace-website/
 - **JavaScript** puro para navegação mobile e animações de entrada (IntersectionObserver).
 - **Google Fonts** – Playfair Display para títulos e Inter para textos.
 - **Font Awesome** para ícones.
+- **React + Tailwind (Play CDN)** exclusivamente em `simulador.html` para renderizar o simulador de build de Sicário fornecido.
 
 ## Rodando localmente
 
@@ -46,6 +48,8 @@ sass assets/styles/main.scss assets/styles/main.css --watch
 ```
 
 Assim as alterações em `main.scss` serão refletidas automaticamente em `main.css`.
+
+Para abrir o simulador Sicário, rode um servidor local e acesse `http://localhost:8000/simulador.html`. A página utiliza React e Tailwind via CDN apenas para esse protótipo isolado.
 
 ## Personalização
 
